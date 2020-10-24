@@ -12,7 +12,7 @@ var validfirstname = false;
 var validlastname = false;
 var validusername = false;
 var validpassword = false;
-var validimage = true;
+var validimage = false;
 
 function attach_events() {
     firstname.addEventListener("change", function(ev) {
@@ -45,6 +45,14 @@ function attach_events() {
     repeatpassword.addEventListener("change", function(ev) {
         validatepassword()
     })
+    image.addEventListener("change", function(ev) {
+        if (image.isDefaultNamespace.length > 0)
+            validimage = true;
+        else {
+            validimage = false;
+            alert("Proszę wgrać poprawne zdjęcie w formacie .png lub .jpg");
+        }
+    })
     submitbtn.addEventListener("click", function(ev){
         if (formvalid())
             signupform.submit();
@@ -64,7 +72,6 @@ function checkusername() {
         if (xhr.readyState == DONE) {
             if (xhr.status == OK) {
                 result = JSON.parse(xhr.responseText);
-                console.log(result);
                 if (result[username.value]=="available"){
                     validusername = true;
                 } else {
