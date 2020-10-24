@@ -1,0 +1,20 @@
+<!doctype>
+<html>
+    <head>
+        <link rel="stylesheet" href="/static/main.css"></link>
+        {% block head %}{% endblock %}
+    </head>
+    <body>
+        <header>
+            <h1>Paczkomatron 3000 by Jakub Zgagacz</h2>
+        </header>
+        <nav>
+            <a href="/">Strona główna</a>
+            <a href="/sender/sign-up">Rejestracja</a>
+        </nav>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+        <footer>2020r. <a href="TODO">repozytorium</a></footer>
+    </body>
+</html>
