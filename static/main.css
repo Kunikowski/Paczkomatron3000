@@ -58,16 +58,26 @@ footer {
 
 .signupform h2{
     margin-top: 0px;
-    text-align: center;
 }
 
 .signupform ul {
-    width: fit-content;
-    margin: auto;
     padding: 0px;
     list-style-type: none;
 }
 
 .signupform ul li{
-    padding: 5px;
+    margin-top: 8px;
+}
+
+.error{
+    width: fit-content;
+    padding: 0;
+    font-size: 80%;
+    color: white;
+    background-color:red;
+}
+
+.error.shown {
+    margin-top: 0px;
+    padding: 2px;
 }

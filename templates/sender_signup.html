@@ -9,12 +9,21 @@
     <h2>Wypełnij poniższy formularz aby zarejestrować się jako nadawca:</h2>
     <ul>
         <li><input type="text" id="firstname" name="firstname" placeholder="Imię"></li>
+        <li class="error" id="firstnameerror"></li>
         <li><input type="text" id="lastname" name="lastname" placeholder="Nazwisko"></li>
-        <li><input type="text" id="username" name="username" placeholder="Nazwa użytkownika"></li>
+        <li class="error" id="lastnameerror"></li>
+        <li><input type="text" id="username" name="login" placeholder="Nazwa użytkownika"></li>
+        <li class="error" id="usernameerror"></li>
+        <li><label>Płeć: </label>
+            <input type="radio" id="sexM" name="sex" value = "M" checked><label>Mężczyzna</label>
+            <input type="radio" id="sexF" name="sex" value = "F"><label>Kobieta</label></li>
         <li><input type="password" id="password" name="password" placeholder="Hasło"></li>
-        <li><input type="password" id="repeatpassword" name="repeatpassword" placeholder="Powtórz hasło"></li>
-        <li><label >Zdjęcie: </label><input type="file" id="image" name="image" accept="image/png, image/jpeg"></li>
-        <li><input type="button" id="submitbtn" name="submitbtn" value="Zarejestruj"></li>
+        <li><input type="password" id="repeatpassword" placeholder="Powtórz hasło"></li>
+        <li class="error" id="passworderror"></li>
+        <li><label >Zdjęcie: </label><input type="file" id="image" name="photo" accept="image/png, image/jpeg"></li>
+        <li class="error" id="imageerror"></li>
+        <li><input type="button" id="submitbtn" value="Zarejestruj"></li>
+        <li class="error" id="submitbtnerror"></li>
     </ul>
 </form>
 {% endblock %}
