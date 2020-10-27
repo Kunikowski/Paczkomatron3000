@@ -22,9 +22,12 @@ var validusername = false;
 var validpassword = false;
 var validimage = false;
 
+var PL = 'ĄĆĘŁŃÓŚŹŻ'
+var pl = 'ąćęłńóśźż'
+
 function attach_events() {
     firstname.addEventListener("input", function(ev) {
-        if (firstname.value.length > 0 && /[A-Z{PL}][a-z{pl}]+/.test(firstname.value)){
+        if (firstname.value.length > 0 && /^[A-Z{PL}][a-z{pl}]+$/.test(firstname.value)){
             validfirstname = true;
             firstnameerror.innerText = "";
             firstnameerror.className = "error";
@@ -36,7 +39,7 @@ function attach_events() {
         }
     })
     lastname.addEventListener("input", function(ev) {
-        if (lastname.value.length > 0 && /[A-Z{PL}][a-z{pl}]+/.test(lastname.value)){
+        if (lastname.value.length > 0 && /^[A-Z{PL}][a-z{pl}]+$/.test(lastname.value)){
             validlastname = true;
             lastnameerror.innerText = "";
             lastnameerror.className = "error";
@@ -48,7 +51,7 @@ function attach_events() {
         }
     })
     username.addEventListener("input", function(ev) {
-        if (/[a-z]{3,12}/.test(username.value))
+        if (/^[a-z]{3,12}$/.test(username.value))
             checkusername();
         else{
             validusername = false;
@@ -118,7 +121,7 @@ function checkusername() {
 }
 
 function validatepassword() {
-    if (password.value.length > 0 && /[A-Za-z]{8,}/.test(password.value)){
+    if (password.value.length > 0 && /.{8,}/.test(password.value)){
         if (password.value.localeCompare(repeatpassword.value) == 0) {
             validpassword = true;
             passworderror.innerText = "";
@@ -130,7 +133,7 @@ function validatepassword() {
         }
     } else {
         validpassword = false;
-        passworderror.innerText = "Hasło musi się składać z co najmniej 8 liter";
+        passworderror.innerText = "Hasło musi się składać z co najmniej 8 znaków";
         passworderror.className = "error shown";
     }
 }
