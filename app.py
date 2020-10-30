@@ -1,4 +1,4 @@
-from flask import Flask, request, make_response, render_template
+from flask import Flask, render_template
 app = Flask(__name__)
 app.debug = False
 

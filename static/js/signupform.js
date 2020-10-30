@@ -22,12 +22,9 @@ var validusername = false;
 var validpassword = false;
 var validimage = false;
 
-var PL = 'ĄĆĘŁŃÓŚŹŻ'
-var pl = 'ąćęłńóśźż'
-
 function attach_events() {
     firstname.addEventListener("input", function(ev) {
-        if (firstname.value.length > 0 && /^[A-Z{PL}][a-z{pl}]+$/.test(firstname.value)){
+        if (firstname.value.length > 0 && /^[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+$/.test(firstname.value)){
             validfirstname = true;
             firstnameerror.innerText = "";
             firstnameerror.className = "error";
@@ -39,7 +36,7 @@ function attach_events() {
         }
     })
     lastname.addEventListener("input", function(ev) {
-        if (lastname.value.length > 0 && /^[A-Z{PL}][a-z{pl}]+$/.test(lastname.value)){
+        if (lastname.value.length > 0 && /^[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+$/.test(lastname.value)){
             validlastname = true;
             lastnameerror.innerText = "";
             lastnameerror.className = "error";
@@ -121,7 +118,7 @@ function checkusername() {
 }
 
 function validatepassword() {
-    if (password.value.length > 0 && /.{8,}/.test(password.value)){
+    if (password.value.length > 0 && /.{8,}/.test(password.value.trim())){
         if (password.value.localeCompare(repeatpassword.value) == 0) {
             validpassword = true;
             passworderror.innerText = "";
