@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<script src="/static/js/signupform.js" defer></script>
+<link rel="stylesheet" href="/static/css/signupform.css"></link>
+{% endblock %}
+
+{% block content %}
+<form method="POST" action="/sender/register" id ="signupform" class="signupform" enctype="multipart/form-data">
+    <h2>Wypełnij poniższy formularz aby zarejestrować się jako nadawca:</h2>
+    <ul id="formlist">
+        <li><input type="text" id="firstname" name="firstname" placeholder="Imię"></li>
+        <li><input type="text" id="lastname" name="lastname" placeholder="Nazwisko"></li>
+        <li><input type="text" id="username" name="login" placeholder="Nazwa użytkownika"></li>
+        <li><input type="text" id="email" name="email" placeholder="E-mail"></li>
+        <li><input type="password" id="password" name="password" placeholder="Hasło"></li>
+        <li><input type="password" id="repeatpassword" placeholder="Powtórz hasło"></li>
+        <li><input type="text" id="adress" name="adress" placeholder="Adres"></li>
+        <li><input type="button" id="submitbtn" value="Zarejestruj"></li>
+    </ul>
+</form>
+{% endblock %}

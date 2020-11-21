@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/signupform.css"></link>
+{% endblock %}
+
+
+{% block content %}
+<form method="POST" class="signupform" action="/sender/login" enctype="multipart/form-data">
+    <h2>Wypełnij poniższy formularz aby się zalogować:</h2>
+    <ul>
+        <li><input type="text" id="username" name="login" placeholder="Nazwa użytkownika" required></li>
+        <li><input type="password" name="password" placeholder="Hasło" required></li>
+        <li><input type="submit" id="submitbtn" value="Login"></li>
+    </ul>
+</form>
+{% endblock %}

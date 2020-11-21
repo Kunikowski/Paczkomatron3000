@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<script src="/static/js/packageform.js" defer></script>
+<link rel="stylesheet" href="/static/css/signupform.css"></link>
+{% endblock %}
+
+{% block content %}
+<h2>Etykiety</h2>
+<input type="button" id="showbtn" value="Nowa etykieta">
+<form method="POST" action="/sender/dashboard" id ="packageform" class="signupform hidden" enctype="multipart/form-data">
+    <ul id="formlist">
+        <li><input type="text" id="name" name="name" placeholder="Nazwa adresata" required></li>
+        <li><input type="text" id="lockerid" name="lockerid" placeholder="Identyfikator skrytki" required></li>
+        <li><input type="text" id="size" name="size" placeholder="Rozmiar paczki" required></li>
+        <li><input type="submit" id="submitbtn" value="Dodaj etykietę"></li>
+    </ul>
+</form>
+    {% if labels %}
+    <ul>
+        {% for label in labels %}
+        <li><span id="{{ label }}" class="label">{{ label }}</span> <input type="button" class="deletebtn" value="Usuń"></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+{% endblock %}
