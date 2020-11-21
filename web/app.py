@@ -10,9 +10,10 @@ from dotenv import load_dotenv
 load_dotenv()
 REDIS_HOST = getenv("REDIS_HOST")
 REDIS_PORT = getenv("REDIS_PORT")
+REDIS_PASS = getenv("REDIS_PASS")
 SESSION_COOKIE_SECURE = True
 
-db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=0)
+db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASS)
 try:
     db.ping()
     SESSION_REDIS=db
