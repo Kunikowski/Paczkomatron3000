@@ -64,7 +64,16 @@ def delete_label(user, pid):
     return True
 
 def get_sender_labels(user):
-    return db.smembers(f"packages:{user}")
+    labels = db.smembers(f"packages:{user}")
+    labels = {label.decode() for label in labels}
+    return labels
+
+def get_labels_info(labels):
+    labelsinfo = {}
+    for label in labels:
+        labelsinfo[label] = db.hgetall(f"package:{label}")
+        labelsinfo[label] = {k.decode() : v.decode() for k,v in labelsinfo[label].items()}
+    return labelsinfo
 
 @app.before_request
 def check_db():
@@ -79,7 +88,6 @@ def get_logged_login():
 
 @app.route('/')
 def index():
-    print("aaa")
     return render_template("index.html")
 
 @app.route('/checklogin/<login>', methods=["GET"])
@@ -153,8 +161,9 @@ def sender_dashboard():
     if g.user is None:
         return redirect(url_for('sender_login'))
     user = g.user
-    labels = (label.decode() for label in get_sender_labels(user))
-    return render_template("sender_dashboard.html", labels=labels)
+    labels = get_sender_labels(user)
+    labelsinfo = get_labels_info(labels)
+    return render_template("sender_dashboard.html", labels=labels, labelsinfo=labelsinfo)
 
 @app.route('/sender/dashboard', methods=["POST"])
 def sender_dashboard_post():
