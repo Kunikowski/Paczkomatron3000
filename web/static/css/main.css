@@ -58,3 +58,14 @@ footer {
     bottom: 0px;
     text-align: center;
 }
+
+.flashes {
+    list-style: none;
+    background-color: red;
+    color: white;
+    text-align: center;
+    padding-left: 0px;
+    padding-right: 0px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
