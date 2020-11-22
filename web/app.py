@@ -13,7 +13,7 @@ REDIS_PORT = getenv("REDIS_PORT")
 REDIS_PASS = getenv("REDIS_PASS")
 SESSION_COOKIE_SECURE = True
 
-db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASS)
+db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASS, socket_connect_timeout=1)
 try:
     db.ping()
     SESSION_REDIS=db
