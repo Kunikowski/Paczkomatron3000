@@ -16,13 +16,13 @@
         <li><input type="submit" id="submitbtn" value="Dodaj etykietę"></li>
     </ul>
 </form>
-    {% if labels and labelsinfo %}
+    {% if labels %}
     <ul>
         {% for label in labels %}
-        <li><span id="{{ label }}" class="label">{{ label }}</span> <input type="button" class="deletebtn" value="Usuń"></br>
-        <span>Nazwa adresata: {{ labelsinfo[label]["name"] }}</br>
-            Skrytka: {{ labelsinfo[label]["lockerid"] }}</br>
-            Rozmiar: {{ labelsinfo[label]["size"] }}</span></li>
+        <li><span id="{{ label }}" class="label">{{ label["pid"] }}</span> <input type="button" class="deletebtn" value="Usuń"></br>
+        <span>Nazwa adresata: {{ label["name"] }}</br>
+            Skrytka: {{ label["lockerid"] }}</br>
+            Rozmiar: {{ label["size"] }}</span></li>
         {% endfor %}
     </ul>
     {% endif %}

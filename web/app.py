@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, redirect, flash, url_for, g, session, make_response
 from flask_session import Session
 from redis import StrictRedis
-from datetime import datetime
-import uuid
+from datetime import datetime, timedelta
+from jwt import encode
+import requests
 
 from os import getenv
 from dotenv import load_dotenv
@@ -13,6 +14,9 @@ REDIS_PORT = getenv("REDIS_PORT")
 REDIS_PASS = getenv("REDIS_PASS")
 SESSION_COOKIE_SECURE = getenv("SESSION_COOKIE_SECURE")
 REDIS_DB = getenv("REDIS_DB")
+JWT_SECRET = getenv("JWT_SECRET")
+API_HOST = getenv("API_HOST")
+JWT_EXP = 20
 
 db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASS, socket_connect_timeout=1)
 try:
@@ -28,8 +32,19 @@ app.secret_key = getenv('SECRET_KEY')
 ses = Session(app)
 app.debug = False
 
-from bcrypt import hashpw, gensalt, checkpw
+def generate_sender_token(user):
+    payload = {
+        "iss":"paczkomatron authorization server",
+        "sub":"sender",
+        "usr":user,
+        "aud":"paczkomatron api",
+        "exp":datetime.utcnow() + timedelta(seconds = JWT_EXP)
+    }
+    token = encode(payload, JWT_SECRET, algorithm='HS256')
+    print(token, flush=True)
+    return token
 
+from bcrypt import hashpw, gensalt, checkpw
 
 def is_user(username):
     return db.hexists(f"user:{username}", "password")
@@ -48,33 +63,6 @@ def authenticate_user(login, password):
     if hash is None:
         return False
     return checkpw(password.encode(), hash)
-
-def save_label(user, name, lockerid, size):
-    pid = str(uuid.uuid4())
-    db.sadd(f"packages:{user}", pid)
-    db.hset(f"package:{pid}", "name", name)
-    db.hset(f"package:{pid}", "lockerid", lockerid)
-    db.hset(f"package:{pid}", "size", size)
-    return True
-
-def delete_label(user, pid):
-    res1 = db.srem(f"packages:{user}", pid)
-    res2 = db.delete(f"package:{pid}")
-    if res1 == 0 or res2 == 0:
-        return False
-    return True
-
-def get_sender_labels(user):
-    labels = db.smembers(f"packages:{user}")
-    labels = {label.decode() for label in labels}
-    return labels
-
-def get_labels_info(labels):
-    labelsinfo = {}
-    for label in labels:
-        labelsinfo[label] = db.hgetall(f"package:{label}")
-        labelsinfo[label] = {k.decode() : v.decode() for k,v in labelsinfo[label].items()}
-    return labelsinfo
 
 @app.before_request
 def check_db():
@@ -162,9 +150,15 @@ def sender_dashboard():
     if g.user is None:
         return redirect(url_for('sender_login'))
     user = g.user
-    labels = get_sender_labels(user)
-    labelsinfo = get_labels_info(labels)
-    return render_template("sender_dashboard.html", labels=labels, labelsinfo=labelsinfo)
+    token = generate_sender_token(user)
+    head = {"Authorization": f"Bearer {token.decode()}"}
+    try:
+        response = requests.get(API_HOST + '/labels', headers=head).json()
+    except:
+        flash("Nie można połączyć się z api, spróbuj ponownie później")
+        return redirect(url_for('index'))
+    labels = response['_embedded']['labels']
+    return render_template("sender_dashboard.html", labels=labels)
 
 @app.route('/sender/dashboard', methods=["POST"])
 def sender_dashboard_post():
@@ -180,8 +174,19 @@ def sender_dashboard_post():
         return "No locker ID provided", 400
     if size is None:
         return "No package size provided", 400
-    success = save_label(user, name, lockerid, size)
-    if not success:
+    label = {
+        "name": name,
+        "lockerid": lockerid,
+        "size": size
+    }
+    token = generate_sender_token(user)
+    head = {"Authorization": f"Bearer {token.decode()}"}
+    try:
+        response = requests.post(API_HOST + '/labels', headers=head, json=label)
+    except:
+        flash("Nie można połączyć się z api, spróbuj ponownie później")
+        return redirect(url_for('index'))
+    if response.status_code != 200:
         flash("Błąd podczas dodawania etykiety")
     return redirect(url_for("sender_dashboard"))
 
@@ -190,8 +195,14 @@ def sender_dashboard_pid_delete(pid):
     if g.user is None:
         return "Unauthorized", 401
     user = g.user
-    success = delete_label(user, pid)
-    if not success:
+    token = generate_sender_token(user)
+    head = {"Authorization": f"Bearer {token.decode()}"}
+    try:
+        response = requests.delete(API_HOST + '/labels/'+pid, headers=head)
+    except:
+        flash("Nie można połączyć się z api, spróbuj ponownie później")
+        return redirect(url_for('index'))
+    if response.status_code != 200:
         return "Couldn't delete package", 400
     return "OK", 200
 
