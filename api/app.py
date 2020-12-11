@@ -33,6 +33,7 @@ def save_label(user, name, lockerid, size):
     db.hset(f"package:{pid}", "name", name)
     db.hset(f"package:{pid}", "lockerid", lockerid)
     db.hset(f"package:{pid}", "size", size)
+    db.hset(f"package:{pid}", "status", "nienadana")
     return True
 
 def delete_label(user, pid):
@@ -54,6 +55,26 @@ def get_labels_info(labels):
         labelsinfo[label] = {k.decode() : v.decode() for k,v in labelsinfo[label].items()}
     return labelsinfo
 
+def get_all_labels():
+    keys = db.keys("package:*")
+    labels = []
+    for key in keys:
+        key = key.decode()
+        s = key.split(":")
+        labels.append(s[1])
+    return labels
+
+def get_all_packages():
+    labels = get_all_labels()
+    labelsinfo = get_labels_info(labels)
+    packages = [label for label in labels if labelsinfo[label].get("status", "nienadana") != "nienadana"]
+    return packages
+
+def update_package_status(pid, status):
+    db.hset(f"package:{pid}", "status", status)
+    return True
+
+
 @app.before_request
 def before_request_func():
     token = request.headers.get('Authorization','').replace('Bearer ','')
@@ -65,16 +86,23 @@ def before_request_func():
 @app.route('/', methods=['GET'])
 def index():
     links = []
-    links.append(Link('labels', '/labels', templated=True))
+    links.append(Link('labels', '/labels'))
+    links.append(Link('packages', '/packages'))
     document = Document(data = {}, links=links)
     return document.to_json()
 
 @app.route('/labels', methods=['GET'])
 def labels_list():
+    sub = g.authorization.get('sub')
     user = g.authorization.get('usr')
-    if user is None:
+    if user is None or sub is None:
         return {"error":'Unauthorized'}, 401
-    labels = get_sender_labels(user)
+    if sub == "sender":
+        labels = get_sender_labels(user)
+    elif sub == "courier":
+        labels = get_all_labels()
+    else:
+        return {"error":'Unauthorized'}, 401
     labelsinfo = get_labels_info(labels)
     links = []
     links.append(Link('find', '/labels/{pid}', templated=True))
@@ -84,9 +112,15 @@ def labels_list():
         name = labelsinfo[pid]["name"]
         lockerid = labelsinfo[pid]["lockerid"]
         size = labelsinfo[pid]["size"]
+        status = labelsinfo[pid].get("status", "nienadana")
+        ilinks = []
         link = Link('self', '/labels/'+pid)
-        data = {'pid':pid, 'name':name, 'lockerid':lockerid, 'size':size}
-        items.append(Embedded(data = data, links=[link]))
+        ilinks.append(link)
+        if (status != "nienadana"):
+            link = Link('package', '/packages/'+pid)
+            ilinks.append(link)
+        data = {'pid':pid, 'name':name, 'lockerid':lockerid, 'size':size, 'status':status}
+        items.append(Embedded(data = data, links=ilinks))
     document = Document(embedded={'labels':Embedded(data=items)})
     return document.to_json()
 
@@ -114,7 +148,7 @@ def post_label():
     if not success:
         return {"error":"Couldn't add label"}, 400
     links = []
-    links.append(Link('labels', '/labels', templated=True))
+    links.append(Link('labels', '/labels'))
     document = Document(data = {}, links=links)
     return document.to_json()
 
@@ -122,12 +156,101 @@ def post_label():
 def remove_label(pid):
     user = g.authorization.get('usr')
     if user is None:
-        return {"error":'Unauthorized'}, 401 
+        return {"error":'Unauthorized'}, 401
+    if pid not in get_all_labels():
+        return {"error":'No label with given id'}, 400
+    labelsinfo = get_labels_info([pid])
+    if labelsinfo[pid].get("status", "nienadana") != "nienadana":
+        return {"error":'Cannot delete label if package was created'}, 400
     success = delete_label(g.authorization.get('usr'), pid)
     if not success:
         return {"error":"Couldn't delete label"}, 400
     links = []
-    links.append(Link('labels', '/labels', templated=True))
+    links.append(Link('labels', '/labels'))
+    document = Document(data = {}, links=links)
+    return document.to_json()
+
+@app.route('/packages', methods=['GET'])
+def package_list():
+    sub = g.authorization.get('sub')
+    user = g.authorization.get('usr')
+    if user is None or sub is None or sub != "courier":
+        return {"error":'Unauthorized'}, 401
+    packages = get_all_packages()
+    labelsinfo = get_labels_info(packages)
+    links = []
+    links.append(Link('find', '/packages/{pid}', templated=True))
+    items = []
+    for package in packages:
+        pid = package
+        name = labelsinfo[pid]["name"]
+        lockerid = labelsinfo[pid]["lockerid"]
+        size = labelsinfo[pid]["size"]
+        status = labelsinfo[pid].get("status", "nienadana")
+        link = Link('self', '/packages/'+pid)
+        data = {'pid':pid, 'name':name, 'lockerid':lockerid, 'size':size, 'status':status}
+        items.append(Embedded(data = data, links=[link]))
+    document = Document(embedded={'packages':Embedded(data=items)})
+    return document.to_json()
+
+@app.route('/packages', methods=['POST'])
+def add_package():
+    sub = g.authorization.get('sub')
+    user = g.authorization.get('usr')
+    if user is None or sub is None or sub != "courier":
+        return {"error":'Unauthorized'}, 401
+    package = request.json
+    if package is None:
+        return {"error":"No JSON package representation"}, 400
+    try:
+        pid = package["pid"]
+    except:
+        return {"error":"Incorrect JSON package representation"}, 400
+    if len(pid) == 0:
+        return {"error":"No package id provided"}, 400
+    if pid not in get_all_labels():
+        return {"error":"No package with provided id"}, 400
+    labelsinfo = get_labels_info([pid])
+    if labelsinfo[pid].get("status", "nienadana") != "nienadana":
+        return {"error":"Package was already created"}, 400
+    success = update_package_status(pid, "w drodze")
+    if not success:
+        return {"error":"Couldn't add package"}, 400
+    links = []
+    links.append(Link('packages', '/packages'))
+    document = Document(data = {}, links=links)
+    return document.to_json()
+
+@app.route('/packages/<pid>', methods=['POST'])
+def update_package(pid):
+    sub = g.authorization.get('sub')
+    user = g.authorization.get('usr')
+    if user is None or sub is None or sub != "courier":
+        return {"error":'Unauthorized'}, 401
+    package = request.json
+    if package is None:
+        return {"error":"No JSON package representation"}, 400
+    try:
+        jpid = package["pid"]
+        status = package["status"]
+    except:
+        return {"error":"Incorrect JSON package representation"}, 400
+    if len(pid) == 0:
+        return {"error":"No package id provided"}, 400
+    if jpid != pid:
+        return {"error":"Incorrect package id"}, 400
+    if pid not in get_all_packages():
+        return {"error":"No package with provided id"}, 400
+    if status not in ["dostarczona", "odebrana"]:
+        return {"error":"Incorrect status provided"}, 400
+    labelsinfo = get_labels_info([pid])
+    if labelsinfo[pid].get("status", "nienadana") == "odebrana" and status == "dostarczona":
+        return {"error":"Cannot change status of received package"}, 400
+    success = update_package_status(pid, status)
+    if not success:
+        return {"error":"Couldn't update package status"}, 400
+    links = []
+    links.append(Link('packages', '/packages'))
     document = Document(data = {}, links=links)
     return document.to_json()
 

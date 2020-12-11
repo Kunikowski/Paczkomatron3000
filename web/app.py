@@ -41,7 +41,7 @@ def generate_sender_token(user):
         "exp":datetime.utcnow() + timedelta(seconds = JWT_EXP)
     }
     token = encode(payload, JWT_SECRET, algorithm='HS256')
-    print(token, flush=True)
+    #print(token, flush=True)
     return token
 
 from bcrypt import hashpw, gensalt, checkpw

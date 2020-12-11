@@ -19,10 +19,15 @@
     {% if labels %}
     <ul>
         {% for label in labels %}
-        <li><span id="{{ label }}" class="label">{{ label["pid"] }}</span> <input type="button" class="deletebtn" value="Usuń"></br>
+        <li><span id="{{ label }}" class="label">{{ label["pid"] }}</span> 
+            {% if not label["_links"].get("package") %}
+            <input type="button" class="deletebtn" value="Usuń"> 
+            {% endif %}
+        </br>
         <span>Nazwa adresata: {{ label["name"] }}</br>
             Skrytka: {{ label["lockerid"] }}</br>
             Rozmiar: {{ label["size"] }}</span></li>
+            Status: {{ label.get("status", "nienadana") }}
         {% endfor %}
     </ul>
     {% endif %}
