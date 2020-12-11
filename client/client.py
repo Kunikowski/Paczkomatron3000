@@ -13,7 +13,7 @@ def safe_get(l, idx):
 if safe_get(sys.argv, 1) == "local":
     API = "http://localhost:8001"
 else:
-    API = "TODO"
+    API = "https://hidden-depths-96421.herokuapp.com"
 
 def showMiniHelp():
     print('Wpisz "pomoc" aby wyświetlić pomoc, "q" aby wyjść')
