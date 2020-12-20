@@ -181,8 +181,7 @@ def remove_label(pid):
         return {"error":'Unauthorized'}, 401
     if pid not in get_all_labels():
         return {"error":'No label with given id'}, 400
-    labelsinfo = get_labels_info([pid])
-    if labelsinfo[pid].get("status", "nienadana") != "nienadana":
+    if is_package(pid):
         return {"error":'Cannot delete label if package was created'}, 400
     success = delete_label(g.authorization.get('usr'), pid)
     if not success:
