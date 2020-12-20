@@ -33,7 +33,6 @@ def save_label(user, name, lockerid, size):
     db.hset(f"package:{pid}", "name", name)
     db.hset(f"package:{pid}", "lockerid", lockerid)
     db.hset(f"package:{pid}", "size", size)
-    db.hset(f"package:{pid}", "status", "nienadana")
     return True
 
 def delete_label(user, pid):
@@ -65,15 +64,39 @@ def get_all_labels():
     return labels
 
 def get_all_packages():
-    labels = get_all_labels()
-    labelsinfo = get_labels_info(labels)
-    packages = [label for label in labels if labelsinfo[label].get("status", "nienadana") != "nienadana"]
+    keys = db.keys("sentpkg:*")
+    packages = []
+    for key in keys:
+        key = key.decode()
+        s = key.split(":")
+        packages.append(s[1])
     return packages
 
-def update_package_status(pid, status):
-    db.hset(f"package:{pid}", "status", status)
+def get_packages_info(packages):
+    packagesinfo = {}
+    for package in packages:
+        packagesinfo[package] = db.hgetall(f"sentpkg:{package}")
+        packagesinfo[package] = {k.decode() : v.decode() for k,v in packagesinfo[package].items()}
+    return packagesinfo
+
+def create_package(pid):
+    db.hset(f"sentpkg:{pid}", "pid", pid)
+    db.hset(f"sentpkg:{pid}", "status", "w drodze")
     return True
 
+def update_package_status(pid, status):
+    db.hset(f"sentpkg:{pid}", "status", status)
+    return True
+
+def is_package(pid):
+    return db.hexists(f"sentpkg:{pid}", "status")
+
+@app.before_request
+def check_db():
+    try:
+        db.ping()
+    except:
+        return "Couldn't connect to database", 500
 
 @app.before_request
 def before_request_func():
@@ -112,14 +135,13 @@ def labels_list():
         name = labelsinfo[pid]["name"]
         lockerid = labelsinfo[pid]["lockerid"]
         size = labelsinfo[pid]["size"]
-        status = labelsinfo[pid].get("status", "nienadana")
         ilinks = []
         link = Link('self', '/labels/'+pid)
         ilinks.append(link)
-        if (status != "nienadana"):
+        if (is_package(pid)):
             link = Link('package', '/packages/'+pid)
             ilinks.append(link)
-        data = {'pid':pid, 'name':name, 'lockerid':lockerid, 'size':size, 'status':status}
+        data = {'pid':pid, 'name':name, 'lockerid':lockerid, 'size':size}
         items.append(Embedded(data = data, links=ilinks))
     document = Document(embedded={'labels':Embedded(data=items)})
     return document.to_json()
@@ -177,18 +199,15 @@ def package_list():
     if user is None or sub is None or sub != "courier":
         return {"error":'Unauthorized'}, 401
     packages = get_all_packages()
-    labelsinfo = get_labels_info(packages)
+    packagesinfo = get_packages_info(packages)
     links = []
     links.append(Link('find', '/packages/{pid}', templated=True))
     items = []
     for package in packages:
         pid = package
-        name = labelsinfo[pid]["name"]
-        lockerid = labelsinfo[pid]["lockerid"]
-        size = labelsinfo[pid]["size"]
-        status = labelsinfo[pid].get("status", "nienadana")
-        link = Link('self', '/packages/'+pid)
-        data = {'pid':pid, 'name':name, 'lockerid':lockerid, 'size':size, 'status':status}
+        status = packagesinfo[package].get("status")
+        link = Link('self', '/packages/'+package)
+        data = {'pid':pid, 'status':status}
         items.append(Embedded(data = data, links=[link]))
     document = Document(embedded={'packages':Embedded(data=items)})
     return document.to_json()
@@ -209,11 +228,10 @@ def add_package():
     if len(pid) == 0:
         return {"error":"No package id provided"}, 400
     if pid not in get_all_labels():
-        return {"error":"No package with provided id"}, 400
-    labelsinfo = get_labels_info([pid])
-    if labelsinfo[pid].get("status", "nienadana") != "nienadana":
+        return {"error":"No label with provided id"}, 400
+    if pid in get_all_packages():
         return {"error":"Package was already created"}, 400
-    success = update_package_status(pid, "w drodze")
+    success = create_package(pid)
     if not success:
         return {"error":"Couldn't add package"}, 400
     links = []
@@ -221,7 +239,7 @@ def add_package():
     document = Document(data = {}, links=links)
     return document.to_json()
 
-@app.route('/packages/<pid>', methods=['POST'])
+@app.route('/packages/<pid>', methods=['PUT'])
 def update_package(pid):
     sub = g.authorization.get('sub')
     user = g.authorization.get('usr')
@@ -243,8 +261,8 @@ def update_package(pid):
         return {"error":"No package with provided id"}, 400
     if status not in ["dostarczona", "odebrana"]:
         return {"error":"Incorrect status provided"}, 400
-    labelsinfo = get_labels_info([pid])
-    if labelsinfo[pid].get("status", "nienadana") == "odebrana" and status == "dostarczona":
+    packagesinfo = get_packages_info([pid])
+    if packagesinfo[pid].get("status") == "odebrana" and status == "dostarczona":
         return {"error":"Cannot change status of received package"}, 400
     success = update_package_status(pid, status)
     if not success:

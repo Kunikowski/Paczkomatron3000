@@ -38,7 +38,10 @@ def printList():
             print("Lista etykiet:")
             for label in plist:
                 print(label["pid"])
-                print(f"  status:{label.get('status')}")
+                if label.get('_links').get('package') is not None:
+                    print(" nadana: tak")
+                else:
+                    print(" nadana: nie") 
         else:
             print("Nie można wczytać listy etykiet, spróbuj ponownie później")
         res = requests.get(API + "/packages", headers=head)
@@ -47,9 +50,9 @@ def printList():
             print("Lista paczek:")
             for label in plist:
                 print(label["pid"])
-                print(f"  status:{label.get('status')}")
+                print(f"  status: {label.get('status')}")
         else:
-            print("Nie można wczytać listy etykiet, spróbuj ponownie później")
+            print("Nie można wczytać listy paczek, spróbuj ponownie później")
     except:
         printApiError()
 
@@ -76,7 +79,7 @@ def changePackageStatus(pid, status):
             "status":status
         }
         head = {"Authorization": f"Bearer {token}"}
-        res = requests.post(API + "/packages/" + pid, headers=head, json=package)
+        res = requests.put(API + "/packages/" + pid, headers=head, json=package)
         if res.status_code == 200:
             print("Pomyślnie zaktualizowano status paczki")
         elif res.status_code == 400:
