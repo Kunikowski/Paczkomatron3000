@@ -3,7 +3,10 @@ from flask_session import Session
 from redis import StrictRedis
 from datetime import datetime, timedelta
 from jwt import encode
+from authlib.integrations.flask_client import OAuth
+from six.moves.urllib.parse import urlencode
 import requests
+from secrets import token_hex
 
 from os import getenv
 from dotenv import load_dotenv
@@ -17,6 +20,13 @@ REDIS_DB = getenv("REDIS_DB")
 JWT_SECRET = getenv("JWT_SECRET")
 API_HOST = getenv("API_HOST")
 JWT_EXP = 20
+AUTH0_CALLBACK_URL = getenv("AUTH0_CALLBACK_URL")
+AUTH0_CLIENT_ID = getenv("AUTH0_CLIENT_ID")
+AUTH0_CLIENT_SECRET = getenv("AUTH0_CLIENT_SECRET")
+AUTH0_DOMAIN = getenv("AUTH0_DOMAIN")
+AUTH0_BASE_URL = 'https://' + AUTH0_DOMAIN
+AUTH0_AUDIENCE = getenv("AUTH0_AUDIENCE")
+
 
 db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASS, socket_connect_timeout=1)
 try:
@@ -31,6 +41,20 @@ app.config.from_object(__name__)
 app.secret_key = getenv('SECRET_KEY')
 ses = Session(app)
 app.debug = False
+
+oauth = OAuth(app)
+
+auth0 = oauth.register(
+    'auth0',
+    client_id=AUTH0_CLIENT_ID,
+    client_secret=AUTH0_CLIENT_SECRET,
+    api_base_url=AUTH0_BASE_URL,
+    access_token_url=AUTH0_BASE_URL + '/oauth/token',
+    authorize_url=AUTH0_BASE_URL + '/authorize',
+    client_kwargs={
+        'scope': 'openid profile email',
+    },
+)
 
 def generate_sender_token(user):
     payload = {
@@ -142,7 +166,11 @@ def sender_login_post():
 
 @app.route('/sender/logout', methods=["GET"])
 def sender_logout():
+    is_oauth = session.get('oauth')
     session.clear()
+    if is_oauth:
+        params = {'returnTo': url_for('index', _external=True), 'client_id': AUTH0_CLIENT_ID}
+        return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
     return redirect(url_for('index'))
 
 @app.route('/sender/dashboard', methods=["GET"])
@@ -151,7 +179,7 @@ def sender_dashboard():
         return redirect(url_for('sender_login'))
     user = g.user
     token = generate_sender_token(user)
-    head = {"Authorization": f"Bearer {token.decode()}"}
+    head = {"Authorization": f"Bearer {token}"}
     try:
         response = requests.get(API_HOST + '/labels', headers=head).json()
     except:
@@ -180,7 +208,7 @@ def sender_dashboard_post():
         "size": size
     }
     token = generate_sender_token(user)
-    head = {"Authorization": f"Bearer {token.decode()}"}
+    head = {"Authorization": f"Bearer {token}"}
     try:
         response = requests.post(API_HOST + '/labels', headers=head, json=label)
     except:
@@ -196,7 +224,7 @@ def sender_dashboard_pid_delete(pid):
         return "Unauthorized", 401
     user = g.user
     token = generate_sender_token(user)
-    head = {"Authorization": f"Bearer {token.decode()}"}
+    head = {"Authorization": f"Bearer {token}"}
     try:
         response = requests.delete(API_HOST + '/labels/'+pid, headers=head)
     except:
@@ -205,6 +233,28 @@ def sender_dashboard_pid_delete(pid):
     if response.status_code != 200:
         return "Couldn't delete package", 400
     return "OK", 200
+
+@app.route('/callback')
+def callback():
+    auth0.authorize_access_token()
+    resp = auth0.get('userinfo')
+    userinfo = resp.json()
+    session["JWT_PAYLOAD"] = userinfo
+    session["oauth"] = True
+    session["login"] = userinfo['sub']
+    if not is_user(session.get("login")):
+        success = save_user("oauth", userinfo["nickname"], session["login"], userinfo["email"], token_hex(32), "oauthaddress")
+        if not success:
+            flash("Nie można utworzyć użytkownika, spróbuj później")
+            session.clear()
+            params = {'returnTo': url_for('home', _external=True), 'client_id': AUTH0_CLIENT_ID}
+            return redirect(auth0.api_base_url + '/v2/logout?' + urlencode(params))
+    return redirect('/sender/dashboard')
+
+@app.route('/oauthlogin')
+def oauth_login():
+    return auth0.authorize_redirect(redirect_uri=AUTH0_CALLBACK_URL, audience=AUTH0_AUDIENCE)
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

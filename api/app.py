@@ -3,12 +3,13 @@ from redis import StrictRedis
 from flask_hal import HAL
 from flask_hal.document import Document, Embedded
 from flask_hal.link import Link
-from jwt import decode
+from jwt import decode, encode
 import json
 import uuid
 
 from os import getenv
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 load_dotenv()
 REDIS_HOST = getenv("REDIS_HOST")
@@ -16,6 +17,9 @@ REDIS_PORT = getenv("REDIS_PORT")
 REDIS_PASS = getenv("REDIS_PASS")
 REDIS_DB = getenv("REDIS_DB")
 JWT_SECRET = getenv("JWT_SECRET")
+COUR_CLIENT_ID = getenv("COUR_CLIENT_ID")
+COUR_PUBLIC_KEY = getenv("COUR_PUBLIC_KEY")
+COUR_JWT_EXP = 3600
 
 db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASS, socket_connect_timeout=1)
 try:
@@ -271,5 +275,26 @@ def update_package(pid):
     document = Document(data = {}, links=links)
     return document.to_json()
 
+def generate_courier_token(user):
+    payload = {
+        "iss":"paczkomatron authorization server",
+        "sub":"courier",
+        "usr":user,
+        "aud":"paczkomatron api",
+        "exp":datetime.utcnow() + timedelta(seconds = COUR_JWT_EXP)
+    }
+    token = encode(payload, JWT_SECRET, algorithm='HS256')
+    #print(token, flush=True)
+    return token
+
+@app.route('/courier/jwt')
+def courier_jwt():
+    auth0token = request.headers.get('Authorization','').replace('Bearer ','')
+    try:
+        decodedtoken = decode(auth0token, COUR_PUBLIC_KEY, algorithms=['RS256'], audience=COUR_CLIENT_ID)
+        couriertoken = generate_courier_token(decodedtoken.get("nickname"))
+        return couriertoken, 200
+    except Exception as e:
+        return "Bad ID token", 400
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

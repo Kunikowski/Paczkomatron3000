@@ -1,8 +1,6 @@
 import requests
 import sys
-
-
-token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJwYWN6a29tYXRyb24gYXV0aG9yaXphdGlvbiBzZXJ2ZXIiLCJzdWIiOiJjb3VyaWVyIiwidXNyIjoiamFua3VyaWVyb3d5IiwiYXVkIjoicGFjemtvbWF0cm9uIGFwaSIsImV4cCI6MTYxNTQ3MTk4Nn0.PAruRQyLXt62OBzcGbr4qwWiVGG4k_lQidGNFdhCmq8"
+import time
 
 def safe_get(l, idx):
     try:
@@ -14,6 +12,40 @@ if safe_get(sys.argv, 1) == "local":
     API = "http://localhost:8001"
 else:
     API = "https://hidden-depths-96421.herokuapp.com"
+
+CLIENT_ID = "NMAtsTzZo7Poh6OeKyDOo3Vpq70WHOnt"
+SCOPE = "profile email openid"
+AUDIENCE = ""
+payload = f"client_id={CLIENT_ID}&scope={SCOPE}&audience={AUDIENCE}"
+headers = { 'content-type': "application/x-www-form-urlencoded" }
+res = requests.post("https://zgagaczj.us.auth0.com/oauth/device/code", data=payload, headers=headers)
+print(f"Kod autoryzacyjny: {res.json()['user_code']}")
+print("Zweryfikuj urządzenie przechodząc pod poniższy link:")
+print(res.json()["verification_uri_complete"])
+interval = res.json()["interval"]
+device_code = res.json()["device_code"]
+headers = { 'content-type': "application/x-www-form-urlencoded" }
+payload = f"grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code={device_code}&client_id={CLIENT_ID}"
+res = requests.post("https://zgagaczj.us.auth0.com/oauth/token", data=payload, headers=headers)
+time.sleep(interval)
+while res.status_code != 200:
+    error = res.json()["error"]
+    print("Czekam na autoryzację...")
+    if error == "expired_token" or error == "access_denied":
+        print("Błąd autoryzacji, spróbuj ponownie")
+        exit(1)
+    res = requests.post("https://zgagaczj.us.auth0.com/oauth/token", data=payload, headers=headers)
+    time.sleep(interval)
+idtoken = res.json()["id_token"]
+head = {"Authorization": f"Bearer {idtoken}"}
+res = requests.get(API + "/courier/jwt", headers=head)
+if res.status_code != 200:
+    print("Błąd podczas generacji tokenu, spróbuj ponownie później")
+    exit(1)
+token = res.text
+
+#obejście logowania przez oauth0 stałym tokenem
+#token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJwYWN6a29tYXRyb24gYXV0aG9yaXphdGlvbiBzZXJ2ZXIiLCJzdWIiOiJjb3VyaWVyIiwidXNyIjoiamFua3VyaWVyb3d5IiwiYXVkIjoicGFjemtvbWF0cm9uIGFwaSIsImV4cCI6MTYxNTQ3MTk4Nn0.PAruRQyLXt62OBzcGbr4qwWiVGG4k_lQidGNFdhCmq8"
 
 def showMiniHelp():
     print('Wpisz "pomoc" aby wyświetlić pomoc, "q" aby wyjść')
@@ -88,6 +120,8 @@ def changePackageStatus(pid, status):
             print("Nie można zaktualizować statusu paczki, spróbuj ponownie później")
     except:
         printApiError()
+
+showMiniHelp()
 
 while True:
     inp = input().split(" ")

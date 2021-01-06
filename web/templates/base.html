@@ -15,6 +15,7 @@
             <a href="/sender/dashboard">Kokpit</a>
             {% if g.user is none %}
                 <a href="/sender/login">Zaloguj</a>
+                <a href="/oauthlogin">Zaloguj z oauth</a>
             {% else %}
                 <a href="/sender/logout">Wyloguj</a>
             {% endif %}
