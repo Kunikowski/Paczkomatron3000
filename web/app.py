@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash, url_for, g, session, make_response
+from flask import Flask, render_template, request, redirect, flash, url_for, g, session, jsonify
 from flask_session import Session
 from redis import StrictRedis
 from datetime import datetime, timedelta
@@ -7,6 +7,7 @@ from authlib.integrations.flask_client import OAuth
 from six.moves.urllib.parse import urlencode
 import requests
 from secrets import token_hex
+import time
 
 from os import getenv
 from dotenv import load_dotenv
@@ -87,6 +88,17 @@ def authenticate_user(login, password):
     if hash is None:
         return False
     return checkpw(password.encode(), hash)
+
+def get_user_notifications(login):
+    notifs = db.zrevrange(f"notifications:{login}", 0, -1)
+    dnotifs = []
+    for notif in notifs:
+        dnotifs.append(notif.decode())
+    return dnotifs
+
+def delete_user_notifications(login):
+    db.delete(f"notifications:{login}")
+    return
 
 @app.before_request
 def check_db():
@@ -255,6 +267,14 @@ def callback():
 def oauth_login():
     return auth0.authorize_redirect(redirect_uri=AUTH0_CALLBACK_URL, audience=AUTH0_AUDIENCE)
 
+@app.route('/notifications')
+def notifications():
+    notifs = get_user_notifications(g.user)
+    print(notifs, flush=True)
+    if not notifs:
+        return "", 204
+    delete_user_notifications(g.user)
+    return jsonify(notifs)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

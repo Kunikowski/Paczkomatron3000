@@ -6,6 +6,7 @@ from flask_hal.link import Link
 from jwt import decode, encode
 import json
 import uuid
+import time
 
 from os import getenv
 from dotenv import load_dotenv
@@ -37,6 +38,7 @@ def save_label(user, name, lockerid, size):
     db.hset(f"package:{pid}", "name", name)
     db.hset(f"package:{pid}", "lockerid", lockerid)
     db.hset(f"package:{pid}", "size", size)
+    db.hset(f"package:{pid}", "sender", user)
     return True
 
 def delete_label(user, pid):
@@ -94,6 +96,10 @@ def update_package_status(pid, status):
 
 def is_package(pid):
     return db.hexists(f"sentpkg:{pid}", "status")
+
+def add_notif(pid, user, status):
+    db.zadd(f"notifications:{user}", {f"Status paczki {pid} został zmieniony na: {status}":time.time()})
+    return
 
 @app.before_request
 def check_db():
@@ -235,6 +241,7 @@ def add_package():
     if pid in get_all_packages():
         return {"error":"Package was already created"}, 400
     success = create_package(pid)
+    add_notif(pid, get_labels_info([pid])[pid].get("sender"), "w drodze")
     if not success:
         return {"error":"Couldn't add package"}, 400
     links = []
@@ -268,6 +275,7 @@ def update_package(pid):
     if packagesinfo[pid].get("status") == "odebrana" and status == "dostarczona":
         return {"error":"Cannot change status of received package"}, 400
     success = update_package_status(pid, status)
+    add_notif(pid, get_labels_info([pid])[pid].get("sender"), status)
     if not success:
         return {"error":"Couldn't update package status"}, 400
     links = []
