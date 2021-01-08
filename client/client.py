@@ -12,7 +12,7 @@ if safe_get(sys.argv, 1) == "local":
     API = "http://localhost:8001"
 else:
     API = "https://hidden-depths-96421.herokuapp.com"
-"""
+
 CLIENT_ID = "NMAtsTzZo7Poh6OeKyDOo3Vpq70WHOnt"
 SCOPE = "profile email openid"
 AUDIENCE = ""
@@ -43,9 +43,9 @@ if res.status_code != 200:
     print("Błąd podczas generacji tokenu, spróbuj ponownie później")
     exit(1)
 token = res.text
-"""
+
 #obejście logowania przez oauth0 stałym tokenem
-token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJwYWN6a29tYXRyb24gYXV0aG9yaXphdGlvbiBzZXJ2ZXIiLCJzdWIiOiJjb3VyaWVyIiwidXNyIjoiamFua3VyaWVyb3d5IiwiYXVkIjoicGFjemtvbWF0cm9uIGFwaSIsImV4cCI6MTYxNTQ3MTk4Nn0.PAruRQyLXt62OBzcGbr4qwWiVGG4k_lQidGNFdhCmq8"
+#token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJwYWN6a29tYXRyb24gYXV0aG9yaXphdGlvbiBzZXJ2ZXIiLCJzdWIiOiJjb3VyaWVyIiwidXNyIjoiamFua3VyaWVyb3d5IiwiYXVkIjoicGFjemtvbWF0cm9uIGFwaSIsImV4cCI6MTYxNTQ3MTk4Nn0.PAruRQyLXt62OBzcGbr4qwWiVGG4k_lQidGNFdhCmq8"
 
 def showMiniHelp():
     print('Wpisz "pomoc" aby wyświetlić pomoc, "q" aby wyjść')
