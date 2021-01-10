@@ -11,7 +11,7 @@ def safe_get(l, idx):
 if safe_get(sys.argv, 1) == "local":
     API = "http://localhost:8001"
 else:
-    API = "https://hidden-depths-96421.herokuapp.com"
+    API = "https://peaceful-coast-27289.herokuapp.com/"
 
 CLIENT_ID = "NMAtsTzZo7Poh6OeKyDOo3Vpq70WHOnt"
 SCOPE = "profile email openid"
