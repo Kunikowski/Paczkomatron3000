@@ -311,7 +311,7 @@ def courier_jwt():
         decodedidtoken = decode(auth0idtoken, COUR_PUBLIC_KEY, algorithms=['RS256'], audience=COUR_CLIENT_ID, issuer=AUTH0_ISSUER)
         isub = decodedidtoken.get("sub")
         if asub != isub or decodedaccesstoken.get("azp") != COUR_CLIENT_ID:
-            return "Mismatched tokens"
+            return "Mismatched tokens", 400
         couriertoken = generate_courier_token(decodedidtoken.get("nickname"))
         return couriertoken, 200
     except Exception as e:
