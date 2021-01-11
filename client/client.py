@@ -15,7 +15,7 @@ else:
 
 CLIENT_ID = "NMAtsTzZo7Poh6OeKyDOo3Vpq70WHOnt"
 SCOPE = "profile email openid"
-AUDIENCE = ""
+AUDIENCE = "https://api.paczkomatron3000/"
 payload = f"client_id={CLIENT_ID}&scope={SCOPE}&audience={AUDIENCE}"
 headers = { 'content-type': "application/x-www-form-urlencoded" }
 res = requests.post("https://zgagaczj.us.auth0.com/oauth/device/code", data=payload, headers=headers)
@@ -36,8 +36,9 @@ while res.status_code != 200:
         exit(1)
     res = requests.post("https://zgagaczj.us.auth0.com/oauth/token", data=payload, headers=headers)
     time.sleep(interval)
+accesstoken = res.json()["access_token"]
 idtoken = res.json()["id_token"]
-head = {"Authorization": f"Bearer {idtoken}"}
+head = {"Authorization": f"Bearer {accesstoken}", "IDToken": f"Bearer {idtoken}"}
 res = requests.get(API + "/courier/jwt", headers=head)
 if res.status_code != 200:
     print("Błąd podczas generacji tokenu, spróbuj ponownie później")

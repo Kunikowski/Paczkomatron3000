@@ -21,6 +21,9 @@ JWT_SECRET = getenv("JWT_SECRET")
 COUR_CLIENT_ID = getenv("COUR_CLIENT_ID")
 COUR_PUBLIC_KEY = getenv("COUR_PUBLIC_KEY")
 COUR_JWT_EXP = 3600
+AUTH0_DOMAIN = getenv("AUTH0_DOMAIN")
+AUTH0_ISSUER = 'https://' + AUTH0_DOMAIN +'/'
+AUTH0_API_AUDIENCE = getenv("AUTH0_API_AUDIENCE")
 
 db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASS, socket_connect_timeout=1)
 try:
@@ -297,10 +300,19 @@ def generate_courier_token(user):
 
 @app.route('/courier/jwt')
 def courier_jwt():
-    auth0token = request.headers.get('Authorization','').replace('Bearer ','')
+    auth0accesstoken = request.headers.get('Authorization','').replace('Bearer ','')
+    auth0idtoken = request.headers.get('IDToken','').replace('Bearer ','')
     try:
-        decodedtoken = decode(auth0token, COUR_PUBLIC_KEY, algorithms=['RS256'], audience=COUR_CLIENT_ID)
-        couriertoken = generate_courier_token(decodedtoken.get("nickname"))
+        decodedaccesstoken = decode(auth0accesstoken, COUR_PUBLIC_KEY, algorithms=['RS256'], audience=AUTH0_API_AUDIENCE, issuer=AUTH0_ISSUER)
+        asub = decodedaccesstoken.get("sub")
+    except Exception as e:
+        return "Bad access token", 400
+    try:
+        decodedidtoken = decode(auth0idtoken, COUR_PUBLIC_KEY, algorithms=['RS256'], audience=COUR_CLIENT_ID, issuer=AUTH0_ISSUER)
+        isub = decodedidtoken.get("sub")
+        if asub != isub or decodedaccesstoken.get("azp") != COUR_CLIENT_ID:
+            return "Mismatched tokens"
+        couriertoken = generate_courier_token(decodedidtoken.get("nickname"))
         return couriertoken, 200
     except Exception as e:
         return "Bad ID token", 400
