@@ -6,3 +6,4 @@ redis
 bcrypt
 pyjwt
 cryptography
+pika

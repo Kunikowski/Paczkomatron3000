@@ -8,6 +8,9 @@ from six.moves.urllib.parse import urlencode
 import requests
 from secrets import token_hex
 import time
+import pika
+from pika import credentials
+
 
 from os import getenv
 from dotenv import load_dotenv
@@ -27,6 +30,12 @@ AUTH0_CLIENT_SECRET = getenv("AUTH0_CLIENT_SECRET")
 AUTH0_DOMAIN = getenv("AUTH0_DOMAIN")
 AUTH0_BASE_URL = 'https://' + AUTH0_DOMAIN
 AUTH0_AUDIENCE = getenv("AUTH0_AUDIENCE")
+MQ_HOST = getenv("MQ_HOST")
+MQ_VH = getenv("MQ_VH")
+MQ_LOGIN = getenv("MQ_LOGIN")
+MQ_PASS = getenv("MQ_PASS")
+credentials = pika.PlainCredentials(MQ_LOGIN, MQ_PASS)
+parameters = pika.ConnectionParameters(MQ_HOST, 5672, MQ_VH, credentials)
 
 
 db = StrictRedis(REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASS, socket_connect_timeout=1)
@@ -98,6 +107,14 @@ def get_user_notifications(login):
 
 def delete_user_notifications(login):
     db.delete(f"notifications:{login}")
+    return
+
+def log_api_error():
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    channel.queue_declare(queue='errors')
+    channel.basic_publish(exchange='', routing_key='errors', body=f"({datetime.utcnow()}) Sender client couldn't connect to API from IP: {request.remote_addr}")
+    connection.close()
     return
 
 @app.before_request
@@ -195,6 +212,7 @@ def sender_dashboard():
     try:
         response = requests.get(API_HOST + '/labels', headers=head).json()
     except:
+        log_api_error()
         flash("Nie można połączyć się z api, spróbuj ponownie później")
         return redirect(url_for('index'))
     labels = response['_embedded']['labels']
@@ -224,6 +242,7 @@ def sender_dashboard_post():
     try:
         response = requests.post(API_HOST + '/labels', headers=head, json=label)
     except:
+        log_api_error()
         flash("Nie można połączyć się z api, spróbuj ponownie później")
         return redirect(url_for('index'))
     if response.status_code != 200:
@@ -240,6 +259,7 @@ def sender_dashboard_pid_delete(pid):
     try:
         response = requests.delete(API_HOST + '/labels/'+pid, headers=head)
     except:
+        log_api_error()
         flash("Nie można połączyć się z api, spróbuj ponownie później")
         return redirect(url_for('index'))
     if response.status_code != 200:
