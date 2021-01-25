@@ -112,8 +112,8 @@ def delete_user_notifications(login):
 def log_api_error():
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
-    channel.queue_declare(queue='errors')
-    channel.basic_publish(exchange='', routing_key='errors', body=f"({datetime.utcnow()}) Sender client couldn't connect to API from IP: {request.remote_addr}")
+    channel.exchange_declare(exchange='logs', exchange_type='topic')
+    channel.basic_publish(exchange='logs', routing_key='web.error', body=f"({datetime.utcnow()}) Sender client couldn't connect to API from IP: {request.remote_addr}")
     connection.close()
     return
 

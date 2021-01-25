@@ -13,13 +13,17 @@ parameters = pika.ConnectionParameters(MQ_HOST, 5672, MQ_VH, credentials)
 connection = pika.BlockingConnection(parameters)
 channel = connection.channel()
 
-channel.queue_declare(queue='errors')
+channel.exchange_declare(exchange='logs', exchange_type='topic')
+result = channel.queue_declare(queue='', exclusive=True)
+queue  = result.method.queue
+
+channel.queue_bind(exchange='logs', queue=queue, routing_key='*.error')
 
 def callback(ch, method, properties, body):
     print(f'[x] {body.decode()}')
     ch.basic_ack(delivery_tag=method.delivery_tag, multiple=False)
 
-channel.basic_consume(queue='errors', auto_ack=False, on_message_callback=callback)
+channel.basic_consume(queue=queue, auto_ack=False, on_message_callback=callback)
 
 try:
     print('[*] Waiting for messages. To exit press CRTL+C')
